@@ -1,15 +1,34 @@
 package com.example.studentportal;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.support.v7.widget.Toolbar;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 
-public class MainActivity extends AppCompatActivity {
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity implements RecyclerView.OnItemTouchListener {
+    private List<Portal> portals;
+    private RecyclerView recyclerView;
+    private GestureDetector gestureDetector;
+    private PortalAdapter adapter;
+
+    //Constants used when calling the update activity
+    public static final String EXTRA_REMINDER = "Reminder";
+    public static final int REQUESTCODE = 1234;
+    private int mModifyPosition;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -18,14 +37,44 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-       FloatingActionButton  fab = findViewById(R.id.fab);
+        //region fab
+        FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                mModifyPosition = -1;
+                Intent intent = new Intent(MainActivity.this, Add.class);
+                intent.putExtra(EXTRA_REMINDER, new Portal("", ""));
+                startActivityForResult(intent, REQUESTCODE);
             }
         });
+        //endregion
+
+        //region Test data
+        portals = new ArrayList<>();
+        portals.add(new Portal("https://www.google.com/", "Google"));
+        portals.add(new Portal("https://vlo.informatica.hva.nl/index.php", "Vlo"));
+        //endregion
+
+        //region Recycler view
+        recyclerView = findViewById(R.id.recyclerView);
+        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
+        recyclerView.setLayoutManager(layoutManager);
+
+        adapter = new PortalAdapter(this, portals);
+        recyclerView.setAdapter(adapter);
+        //endregion
+
+        //region GestureDetector
+        gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onSingleTapUp(MotionEvent e) {
+                return true;
+            }
+        });
+        //endregion
+
+        recyclerView.addOnItemTouchListener(this);
     }
 
     @Override
@@ -48,5 +97,53 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public boolean onInterceptTouchEvent(@NonNull RecyclerView recyclerView, @NonNull MotionEvent motionEvent) {
+        View child = recyclerView.findChildViewUnder(motionEvent.getX(), motionEvent.getY());
+        int adapterPosition = recyclerView.getChildAdapterPosition(child);
+        if (child != null && gestureDetector.onTouchEvent(motionEvent)) {
+            Intent intent = new Intent(MainActivity.this, WebViewer.class);
+            mModifyPosition = adapterPosition;
+            intent.putExtra(EXTRA_REMINDER, portals.get(adapterPosition));
+            startActivityForResult(intent, REQUESTCODE);
+        }
+        return false;
+    }
+
+    @Override
+    public void onTouchEvent(@NonNull RecyclerView recyclerView, @NonNull MotionEvent motionEvent) {
+
+    }
+
+    @Override
+    public void onRequestDisallowInterceptTouchEvent(boolean b) {
+
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUESTCODE) {
+            if (resultCode == RESULT_OK) {
+                Portal updatePortal = data.getParcelableExtra(MainActivity.EXTRA_REMINDER);
+                // New timestamp: timestamp of update
+                if (mModifyPosition == -1)
+                    portals.add(updatePortal);
+                else
+                    portals.set(mModifyPosition, updatePortal);
+                updateUI();
+            }
+        }
+    }
+
+    private void updateUI() {
+        if (adapter == null) {
+            adapter = new PortalAdapter(this, portals);
+            recyclerView.setAdapter(adapter);
+        } else {
+            adapter.notifyDataSetChanged();
+        }
+
     }
 }
