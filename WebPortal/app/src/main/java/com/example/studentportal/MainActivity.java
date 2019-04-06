@@ -50,12 +50,6 @@ public class MainActivity extends AppCompatActivity implements RecyclerView.OnIt
         });
         //endregion
 
-        //region Test data
-        portals = new ArrayList<>();
-        portals.add(new Portal("https://www.google.com/", "Google"));
-        portals.add(new Portal("https://vlo.informatica.hva.nl/index.php", "Vlo"));
-        //endregion
-
         //region Recycler view
         recyclerView = findViewById(R.id.recyclerView);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
